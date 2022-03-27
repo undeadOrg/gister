@@ -19,7 +19,6 @@ jobs:
           dataset: dumpster-buildevents
           job-status: ${{ job.status }}
           matrix-key: ${{ matrix.go-version }}
-          matrix-key: ${{ matrix.os }}
       - name: Install Go
         uses: actions/setup-go@v2
         with:
