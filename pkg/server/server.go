@@ -144,7 +144,7 @@ func (s *server) consume(ctx context.Context, wg *sync.WaitGroup, client *kgo.Cl
 			}
 
 			fetches.EachError(func(t string, p int32, err error) {
-				s.log.Error("fetch err topic %s partition %d: %v", t, p, err)
+				s.log.Info("fetch err topic %s partition %d: %v", t, p, err)
 			})
 
 			// Iterate through messages
@@ -171,7 +171,7 @@ func (s *server) pipeline(ctx context.Context, wg *sync.WaitGroup, input <-chan 
 			s.log.Info("I can have message")
 			t, err := pipeline.ProcessTwitterTagsMessage(m)
 			if err != nil {
-				s.log.Error("Error Processing Twitter Message: %v", err)
+				s.log.Info("Error Processing Twitter Message: %v", err)
 				break
 			}
 
@@ -194,7 +194,7 @@ func (s *server) sink(ctx context.Context, wg *sync.WaitGroup, client *kgo.Clien
 			start := time.Now()
 			err := pipeline.WriteToTwitterTags(ctx, client, s.outTopic, m)
 			if err != nil {
-				s.log.Error("Error Writing to Kafka Twitter Tags: ", err)
+				s.log.Info("Error Writing to Kafka Twitter Tags: ", err)
 			}
 			s.metrics.DataSink.WithLabelValues(s.build).Observe(float64(time.Since(start).Nanoseconds()))
 		case <-ctx.Done():
