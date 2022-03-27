@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"gister/pkg/metrics"
+	"gister/pkg/pipeline"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -108,19 +109,32 @@ func (s *server) Run(ctx context.Context, ctxCancel context.CancelFunc) {
 		kgo.ConsumerGroup(consumerGroup),
 		kgo.ConsumeTopics(s.inTopic),
 		kgo.ClientID(clientId),
+		kgo.MaxBufferedRecords(10),
 	)
 	if err != nil {
 		s.log.Error("Error setting up consumer client: %v", err)
 	}
 
+	// Kakfa Consumter Group Rebalance
+	client.AllowRebalance()
+
 	pipelineChan := make(chan *kgo.Record, s.workerCount)
 	producerChan := make(chan interface{}, s.workerCount)
 
-	wg.Add(3)
+	wg.Add(1)
 	s.log.Info("Starting Up Processing Threads")
 	go s.consume(ctx, wg, client, pipelineChan)
-	go s.pipeline(ctx, wg, pipelineChan, producerChan)
-	go s.sink(ctx, wg, client, producerChan)
+
+	// Startup Workers
+	wg.Add(s.workerCount)
+	for i := 0; i < s.workerCount; i++ {
+		go s.pipeline(ctx, wg, pipelineChan, producerChan)
+
+	}
+	wg.Add(s.workerCount)
+	for n := 0; n < s.workerCount; n++ {
+		go s.sink(ctx, wg, client, producerChan)
+	}
 
 	wg.Wait()
 	// Close Kafka client
@@ -160,7 +174,12 @@ func (s *server) pipeline(ctx context.Context, wg *sync.WaitGroup, input <-chan 
 		select {
 		case m := <-input:
 			s.log.Info("I can have message")
-			output <- m
+			t, err := pipeline.ProcessTwitterTagsMessage(m)
+			if err != nil {
+				s.log.Error("Error Processing Twitter Message: %v", err)
+				break
+			}
+			output <- t
 		case <-ctx.Done():
 			s.log.Info("Exiting Pipeline")
 			return
@@ -172,20 +191,16 @@ func (s *server) sink(ctx context.Context, wg *sync.WaitGroup, client *kgo.Clien
 	defer wg.Done()
 	for {
 		select {
-		case <-input:
-			s.log.Info(".")
+		case m := <-input:
+			err := pipeline.WriteToTwitterTags(ctx, client, s.outTopic, m)
+			if err != nil {
+				s.log.Error("Error Writing to Kafka Twitter Tags: ", err)
+			}
 		case <-ctx.Done():
+			s.log.Info("Flushing Sink")
+			client.Flush(ctx)
 			s.log.Info("Exiting Sink")
 			return
 		}
-		/*
-			record := &kgo.Record{Topic: s.outTopic, Value: []byte("bar")}
-			client.Produce(ctx, record, func(_ *kgo.Record, err error) {
-				if err != nil {
-					fmt.Printf("record had a produce error: %v\n", err)
-				}
-
-			})
-		*/
 	}
 }

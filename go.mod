@@ -3,24 +3,26 @@ module gister
 go 1.17
 
 require (
-	github.com/Jeffail/gabs v1.4.0
 	github.com/Shopify/sarama v1.32.0
-	github.com/confluentinc/confluent-kafka-go v1.8.2
+	github.com/dghubble/go-twitter v0.0.0-20220319054129-995614af6514
 	github.com/gorilla/mux v1.8.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/twmb/franz-go v1.4.1
+	github.com/twmb/franz-go v1.4.2
 )
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dghubble/sling v1.4.0 // indirect
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
