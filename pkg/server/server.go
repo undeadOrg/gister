@@ -103,7 +103,7 @@ func (s *server) Run(ctx context.Context, ctxCancel context.CancelFunc) {
 		kgo.MaxBufferedRecords(10),
 	)
 	if err != nil {
-		s.log.Error("Error setting up consumer client: %v", err)
+		s.log.Info("Error setting up consumer client: %v", err)
 	}
 
 	// Kakfa Consumter Group Rebalance
