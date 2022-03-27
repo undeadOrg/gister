@@ -5,13 +5,9 @@ on:
     tags:
       - '*'
 
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: undeadorg/gister
-  GCR_REGISTRY: us.gcr.io
-  GCR_IMAGE: dumpster-328618/gister
-  GCR_PROJECT_ID: dumpster-328618 
 
 jobs:
   # define job to build and publish docker image

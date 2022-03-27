@@ -63,7 +63,7 @@ func main() {
 	signal.Notify(quit, os.Interrupt)
 
 	// Setup Server
-	server := server.NewServer(logger)
+	server := server.NewServer(logger, buildNum)
 	server.Brokers(strings.Split(*brokers, ","))
 	server.InTopic(*topicSrc)
 	server.OutTopic(*topicDst)

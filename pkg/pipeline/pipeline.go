@@ -11,9 +11,10 @@ import (
 )
 
 type OutputTwitterTagsMessage struct {
-	Tags    []string
-	Message string
-	Author  string
+	Tags      []string
+	Message   string
+	Author    string
+	CreatedAt time.Time
 }
 
 type TwitterTopLevel struct {
@@ -37,23 +38,24 @@ func ProcessTwitterTagsMessage(m *kgo.Record) (*OutputTwitterTagsMessage, error)
 	time.Sleep(400 * time.Millisecond)
 
 	return &OutputTwitterTagsMessage{
-		Tags:    ht,
-		Message: tmsg.Text,
-		Author:  tmsg.User.ScreenName,
+		Tags:      ht,
+		Message:   tmsg.Text,
+		Author:    tmsg.User.ScreenName,
+		CreatedAt: m.Timestamp,
 	}, nil
 }
 
 // WriteToTwitterTags - Process pipe and sink to kafka
 func WriteToTwitterTags(ctx context.Context, client *kgo.Client, topic string, m interface{}) error {
+	// To pass this over this interface as a defined struct, or to keep it abstract... that is the question...
 	payload, err := json.Marshal(m)
 	if err != nil {
 		return err
 	}
 
 	record := &kgo.Record{
-		Timestamp: time.Now(),
-		Topic:     topic,
-		Value:     payload,
+		Topic: topic,
+		Value: payload,
 	}
 
 	client.Produce(ctx, record, func(_ *kgo.Record, err error) {

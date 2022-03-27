@@ -5,6 +5,7 @@ import (
 	"gister/pkg/metrics"
 	"gister/pkg/pipeline"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -33,31 +34,21 @@ type server struct {
 	outTopic    string
 	workerCount int
 	debug       bool
+	build       string
 }
 
 // NewServer - Create Server instance with Logger and Kafka Client
-func NewServer(logger *log.Entry) *server {
-	/*
-		if debug {
-			log.SetFormatter(&log.TextFormatter{})
-			log.SetLevel(log.DebugLevel)
-		} else {
-			log.SetFormatter(&log.JSONFormatter{})
-		}
-
-		logger := log.WithFields(log.Fields{
-			"service": "gister",
-			"build":   buildNum,
-		})
-	*/
-
-	s := &server{
-		workerCount: 1,
-		log:         logger,
-		//metrics: metrics.NewMetrics(),
+func NewServer(logger *log.Entry, build string) *server {
+	if build == "" {
+		build = "dev"
 	}
 
-	return s
+	return &server{
+		workerCount: 1,
+		log:         logger,
+		metrics:     metrics.NewMetrics(),
+		build:       build,
+	}
 }
 
 // Brokers sets kafka brokers
@@ -159,6 +150,7 @@ func (s *server) consume(ctx context.Context, wg *sync.WaitGroup, client *kgo.Cl
 			// Iterate through messages
 			fetches.EachRecord(func(r *kgo.Record) {
 				output <- r
+				s.metrics.DataProcessed.WithLabelValues(s.build).Inc()
 			})
 		case <-ctx.Done():
 			client.LeaveGroup()
@@ -173,13 +165,20 @@ func (s *server) pipeline(ctx context.Context, wg *sync.WaitGroup, input <-chan 
 	for {
 		select {
 		case m := <-input:
+			// Start timer from recieving msg
+			start := time.Now()
+
 			s.log.Info("I can have message")
 			t, err := pipeline.ProcessTwitterTagsMessage(m)
 			if err != nil {
 				s.log.Error("Error Processing Twitter Message: %v", err)
 				break
 			}
+
+			// Push back onto channel
 			output <- t
+			// Log Metrics for how long this process took
+			s.metrics.DataPipeline.WithLabelValues(s.build).Observe(float64(time.Since(start).Nanoseconds()))
 		case <-ctx.Done():
 			s.log.Info("Exiting Pipeline")
 			return
@@ -192,10 +191,12 @@ func (s *server) sink(ctx context.Context, wg *sync.WaitGroup, client *kgo.Clien
 	for {
 		select {
 		case m := <-input:
+			start := time.Now()
 			err := pipeline.WriteToTwitterTags(ctx, client, s.outTopic, m)
 			if err != nil {
 				s.log.Error("Error Writing to Kafka Twitter Tags: ", err)
 			}
+			s.metrics.DataSink.WithLabelValues(s.build).Observe(float64(time.Since(start).Nanoseconds()))
 		case <-ctx.Done():
 			s.log.Info("Flushing Sink")
 			client.Flush(ctx)
